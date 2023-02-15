@@ -1,0 +1,14 @@
+# SarsCov-2 variant - time of classification as VOC/VOI
+Alpha	2020-12-29
+Beta 	2020-12-29
+Gamma	2020-12-29
+Delta	2021-06-15
+Epsil	2021-02-26
+Eta	2021-02-26
+Iota	2021-02-26
+Kappa	2021-05-07
+Zeta	2021-02-26
+Mu GH	2021-08-30
+Omicr	2021-11-30
+Lambd	2021-06-04
+Theta	2021-05-24

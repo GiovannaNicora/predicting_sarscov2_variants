@@ -1,25 +1,32 @@
-from change_point_detection.reliability_utils import *
-from change_point_detection.loading_data import *
+import pandas as pd
+import os
+import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
-from datetime import *
 import logging
 from sklearn.model_selection import ParameterGrid
 from sklearn.svm import OneClassSVM
-
-def get_time(date_string, date_format= "%Y-%m-%d"):
-    return datetime.strptime(date_string, date_format).date()
+from utils import *
 
 """
 
 Reading files 
 
 """
+# 1. Metadata: download from GISAID
+# column Variant --> labels
+metadata = pd.read_csv('your/filtered_metadata_0328_weeks.csv')
+metadata['Variant'] = metadata['Variant'].replace(' ', 'unknown')
+id_unknown = metadata[metadata['Variant'] == 'unknown']['Accession.ID'].tolist()
+
+dir_week = '/your/dataset_week/'
+
+
 """ When each variant has been classified as VOI or VOC"""
-var_class_time = pd.read_csv('/mnt/resources/2022_04/2022_04/sars_cov2_time_classification.txt', sep='\t')
+var_class_time = pd.read_csv('./sars_cov2_time_classification.txt', sep='\t')
 retraining_week = [27, 35, 45, 48, 49, 51, 62, 75]
-# header
-header = pd.read_csv('/mnt/resources/2022_04/2022_04/dataset_week/1/EPI_ISL_489939.csv', nrows=1)
+# header (kmers)
+header = pd.read_csv('your/dataset_week/1/EPI_ISL_489939.csv', nrows=1)
 
 """
 Useful variable
@@ -39,14 +46,12 @@ features = header.columns[1:].tolist()
 
 date_format = "%Y-%m-%d"
 
-# datetime.strptime(var_class_time.loc['Alpha'].values[0], date_format).date() < datetime.strptime(var_class_time.loc['Delta'].values[0], date_format).date()
-# get_time(var_class_time.loc['Alpha'].values[0]) < get_time(metadata[col_submission_date].iloc[0])
 
 logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         handlers=[
-                            logging.FileHandler('/mnt/resources/2022_04/2022_04/'+'run_main_oneclass_retrain_tmp.log', 'w+'),
+                            logging.FileHandler('run.log', 'w+'),
                             logging.StreamHandler()
                         ])
 
@@ -206,7 +211,7 @@ df_conf['Recall'] = recall_list
 df_conf['F1'] = f1_list
 df_conf['Specificity'] = spec_list
 
-df_conf.to_csv('/mnt/resources/2022_04/2022_04/conf_mat_over_time.tsv', sep='\t', index=None)
+# df_conf.to_csv('/mnt/resources/2022_04/2022_04/conf_mat_over_time.tsv', sep='\t', index=None)
 
 
 x = np.arange(len(fp_list))
@@ -221,7 +226,8 @@ plt.xticks(x, labels=[str(y+2) for y in x], rotation=45, fontsize=20)
 plt.xlabel('Week', fontsize=25)
 
 plt.title('Precision in time from 2020-07-06 to 2022-03-23', fontsize=25)
-plt.savefig('/mnt/resources/2022_04/2022_04/precision_in_time.png', dpi=350)
+plt.show()
+# plt.savefig('/mnt/resources/2022_04/2022_04/precision_in_time.png', dpi=350)
 
 fig, ax = plt.subplots(figsize=(32,14))
 plt.rcParams.update({'font.size':18})
@@ -234,7 +240,7 @@ plt.xticks(x, labels=[str(y+2) for y in x], rotation=45, fontsize=20)
 plt.xlabel('Week', fontsize=25)
 
 plt.title('Recall in time from 2020-07-06 to 2022-03-23', fontsize=25)
-plt.savefig('/mnt/resources/2022_04/2022_04/recall_in_time.png', dpi=350)
+# plt.savefig('/mnt/resources/2022_04/2022_04/recall_in_time.png', dpi=350)
 
 fig, ax = plt.subplots(figsize=(32,14))
 plt.rcParams.update({'font.size':18})
@@ -296,7 +302,7 @@ plt.xticks(x, labels=[str(y+2) for y in x], rotation=45, fontsize=20)
 plt.xlabel('Week', fontsize=25)
 
 plt.title('Percentage of False Positive from 2020-07-06 to 2022-03-23', fontsize=25)
-plt.savefig('/mnt/resources/2022_04/2022_04/perc_fp.png', dpi=350)
+# plt.savefig('/mnt/resources/2022_04/2022_04/perc_fp.png', dpi=350)
 
 
 
@@ -439,202 +445,3 @@ plt.yticks(fontsize=28)
 plt.xlabel('Week', fontsize=25)
 plt.title('Percentage of predicted anomalies from 2020-07-06 to 2022-03-23', fontsize=25)
 plt.savefig('/mnt/resources/2022_04/2022_04/percentage_anomalies_v2.png', dpi=350)
-
-
-
-
-""" Performance """
-first_time = {19:'Alpha', }
-
-x = np.arange(len(count_nonneutral))
-w=0.35
-
-fig, ax = plt.subplots(figsize=(20,10))
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-plt.rcParams.update({'font.size': 12})
-plt.bar([y-w*0.5 for y in x], predicted_neural, label='Predicted Neutral', width=w, alpha=0.8)
-plt.bar([y+w*0.5 for y in x], predicted_nonneutral, label='Predicted anomaly', width=w, alpha=0.8)
-plt.vlines(x[0], 0, 8000, linestyle = ':')
-plt.text(x[0], 8000, '2020-07-06')
-plt.vlines(x[len(x)-1], 0, 8000, linestyle=':')
-plt.text(x[len(x)-1], 8000, '2022-03-23')
-heights = [9000, 9000, 9000, 10000, 9500, 9000, 9000, 9000]
-vtype= ['Alpha\nBeta\nGamma', 'Epsil\nIota\nZeta', 'Kappa',
-        'Theta', 'Lambda', 'Delta', 'Mu', 'Omicron']
-for i,rw in enumerate(retraining_week):
-    week_date_list = list(set(metadata[metadata['week'] == rw][col_submission_date].tolist()))
-    week_date = str(min([get_time(x) for x in week_date_list]))
-    plt.vlines(rw-2, 0, heights[i],
-               #transform=ax.get_xaxis_transform(),
-               linestyle='-', color='red')
-    plt.text(rw-2, heights[i], week_date+'\n'+vtype[i], rotation=0)
-
-
-plt.vlines(19-2, 0, 2000,
-               #transform=ax.get_xaxis_transform(),
-               linestyle='-', color='red')
-plt.scatter(19-2, 2010,
-               #transform=ax.get_xaxis_transform(),
-               linestyle='-', color='red',
-            marker='s', s=60)
-plt.text(19-3, 2000, '2020-11-02\nAlpha', rotation=0)
-
-plt.xticks(x, labels=[str(y+2) for y in x], rotation=45)
-plt.xlabel('Week')
-plt.legend()
-plt.show()
-
-
-label_class = ['', 'Alpha', 'Beta', 'Gamma', 'Epsil', 'Iota', 'Zeta','Kappa',
-               'Theta', 'Lambda', 'Delta', 'Mu', 'Omicron', '']
-y = np.arange(len(label_class))
-fig, ax = plt.subplots(figsize=(32,14))
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-plt.rcParams.update({'font.size': 12})
-
-# when we find the Alpha
-plt.vlines(19-2, 0, y[1], color='red')
-plt.scatter(19-2, y[1], s=70, marker='x',
-            linewidths=10, color='red', label='Predicted as anomaly')
-# when the CDC declared alpha as VOC
-plt.vlines(27-2, 0, y[1], color='blue')
-plt.scatter(27-2, y[1], s=70, marker='o', linewidths=10, color='blue',
-            label='Recognized as VOC/VOI')
-plt.hlines(y[1], 0, 27-2, linestyles='--')
-
-# when we find the Beta
-plt.vlines(20-2, 0, y[2], color='red')
-plt.scatter(20-2, y[2], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared beta as VOC
-plt.vlines(27-2, 0, y[2], color='blue')
-plt.scatter(27-2, y[2], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[2], 0, 27-2, linestyles='--')
-
-# when we find the Gamma
-plt.vlines(27-2, 0, y[3], color='red')
-plt.scatter(27-2, y[3], s=70, marker='x',
-            alpha=0.2,linewidths=10, color='red')
-# when the CDC declared gamma as VOC
-plt.vlines(27-2, 0, y[3], color='blue')
-plt.scatter(27-2, y[3], s=70,
-            alpha=0.5, marker='o', linewidths=10, color='blue')
-plt.hlines(y[3], 0, 27-2, linestyles='--')
-
-# when we find the Epsil
-plt.vlines(22-2, 0, y[4], color='red')
-plt.scatter(22-2, y[4], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared epsil as VOC
-plt.vlines(35-2, 0, y[4], color='blue')
-plt.scatter(35-2, y[4], s=70, marker='o',
-            linewidths=10, color='blue')
-plt.hlines(y[4],0, 35-2, linestyles='--')
-
-# when we find the Zeta
-plt.vlines(23-2, 0, y[6], color='red')
-plt.scatter(23-2, y[6], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared zeta as VOC
-plt.vlines(35-2, 0, y[6], color='blue')
-plt.scatter(35-2, y[6], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[6],0, 35-2, linestyles='--')
-
-# when we find the kappa
-plt.vlines(32-2, 0, y[7], color='red')
-plt.scatter(32-2, y[7], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared kappa as VOC
-plt.vlines(45-2, 0, y[7], color='blue')
-plt.scatter(45-2, y[7], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[7],0, 45-2, linestyles='--')
-
-
-
-# when we find the theta
-plt.vlines(40-2, 0, y[8], color='red')
-plt.scatter(40-2, y[8], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared theta as VOC
-plt.vlines(48-2, 0, y[8], color='blue')
-plt.scatter(48-2, y[8], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[8],0, 48-2, linestyles='--')
-
-
-# when we find the iota
-plt.vlines(29-2, 0, y[5], color='red')
-plt.scatter(29-2, y[5], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared iota as Voc
-plt.vlines(35-2, 0, y[5], color='blue')
-plt.scatter(35-2, y[5], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[5],0, 35-2, linestyles='--')
-
-# when we find the lambda
-plt.vlines(29-2, 0, y[9], color='red')
-plt.scatter(29-2, y[9], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared lambda as voc
-plt.vlines(49-2, 0, y[9], color='blue')
-plt.scatter(49-2, y[9], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[9],0, 49-2, linestyles='--')
-
-
-# when we find the delta
-plt.vlines(31-2, 0, y[10], color='red')
-plt.scatter(31-2, y[10], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared delta as voc
-plt.vlines(51-2, 0, y[10], color='blue')
-plt.scatter(51-2, y[10], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[10],0, 51-2, linestyles='--')
-
-# when we find the mu
-plt.vlines(41-2, 0, y[11], color='red')
-plt.scatter(41-2, y[11], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared mu as voc
-plt.vlines(62-2, 0, y[11], color='blue')
-plt.scatter(62-2, y[11], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[11],0, 62-2, linestyles='--')
-
-# when we find the omicron
-plt.vlines(72-2, 0, y[12], color='red')
-plt.scatter(72-2, y[12], s=70, marker='x', linewidths=10, color='red')
-# when the CDC declared mu as voc
-plt.vlines(75-2, 0, y[12], color='blue')
-plt.scatter(75-2, y[12], s=70, marker='o', linewidths=10, color='blue')
-plt.hlines(y[12],0, 75-2, linestyles='--')
-
-
-#plt.xticks(x[0:81], labels=[str(k+2) for k in x[0:81]], rotation=45, fontsize=20)
-plt.xticks(x, newlab_x, fontsize=28)
-plt.yticks(y, labels=label_class, rotation=0, fontsize=25)
-plt.xlabel('Week', fontsize=25)
-plt.legend(fontsize=25)
-plt.title('Detection of VOC/VOI as anomaly and comparison\nwith date of designation according to CDC',
-          fontsize=25)
-plt.savefig('/mnt/resources/2022_04/2022_04/performance_oneclass_v2.png', dpi=350)
-
-# y_test_predicted_class
-for variant in metadata[col_class_variant].unique():
-    nvar = []
-    npred_anomal = []
-    for k in results_fine_tune[0]['y_test_variant_type'].keys():
-        true_class_list = results_fine_tune[0]['y_test_variant_type'][k]
-        pred_class_list = results_fine_tune[0]['y_test_predicted_class'][k]
-        i_v = np.where(np.array(true_class_list)==variant)[0]
-        if len(i_v) != 0:
-            i_p = np.where(np.array(pred_class_list)[i_v]==-1)[0]
-            npred_anomal.append(len(i_p))
-        else:
-            npred_anomal.append(0)
-        nvar.append(len(i_v))
-
-    fig, ax = plt.subplots(figsize=(20, 10))
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    plt.rcParams.update({'font.size': 12})
-    plt.bar(x, nvar, label=variant, width=w, alpha=0.8)
-    plt.bar(x,  npred_anomal, bottom=nvar, label=variant+' predicted anomaly', width=w, alpha=0.8)
-
-
-    plt.xticks(x, labels=[str(y + 2) for y in x], rotation=45)
-    plt.xlabel('Week')
-    plt.legend()
-    plt.title(variant+' distibution in GISAID')
-
-    plt.savefig('/mnt/resources/2022_04/2022_04/distribution_'+variant+'.png', dpi=150)
