@@ -2,9 +2,9 @@
 
 # -- Project information
 
-project = 'RelAI'
-copyright = '2023, Lorenzo'
-author = 'Lorenzo'
+project = 'sarscov2'
+copyright = '2023, Giovanna'
+author = 'Giovanna'
 
 release = '0.1'
 version = '0.1.0'
